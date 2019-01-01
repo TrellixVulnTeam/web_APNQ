@@ -6,7 +6,7 @@ import sys
 
 class WSGIServer(object):
 
-    def __init__(self, port, app):
+    def __init__(self, port, app, static_path):
         # 1. 创建套接字
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -15,6 +15,7 @@ class WSGIServer(object):
         # 3. 变为监听套接字
         self.tcp_server_socket.listen(128)
         self.application = app
+        self.static_path = static_path
 
     def service_client(self, new_socket):
         """为这个客户端返回数据"""
@@ -41,7 +42,7 @@ class WSGIServer(object):
         # 2.1 如果请求的资源不是以.py结尾的,name就认为是静态资源(html/css/js/png,jpg等)
         if not file_name.endswith(".py"):
             try:
-                f = open("./static" + file_name, "rb")
+                f = open(self.static_path + file_name, "rb")
             except:
                 response = "HTTP/1.1 404 NOT FOUND\r\n"
                 response += "\r\n"
@@ -112,7 +113,7 @@ def main():
             return
     else:
         print("请按照以下方式运行:")
-        print("python3 web_server_7.py 7890 web_server_7_mini_frame:application")
+        print("python3 web_server_8.py 7890 web_server_8_mini_frame:application")
         return
     ret = re.match(r"([^:]+):(.*)", frame_app_name)
     if ret:
@@ -120,15 +121,17 @@ def main():
         app_name = ret.group(2)  # application
     else:
         print("请按照以下方式运行:")
-        print("python3 xxxx.py 7890 web_server_7_mini_frame:application")
+        print("python3 xxxx.py 7890 web_server_8_mini_frame:application")
         return
         """控制整体,创建一个web服务器对象,然后调用这个对象的run_forever方法运行"""
     # import frame_name  ---> 找frame_name.py
-    sys.path.append("./dynamic")
+    with open("./web_server.conf") as f:
+        conf_info = eval(f.read())  # conf_info 此时conf_info是一个字典
+    sys.path.append(conf_info["dynamic_path"])
     frame = __import__(frame_name)  # 返回值标记着导入模块
     app = getattr(frame, app_name)  # 此时app就指向了 dynamic/web_server_7_mini_frame模块中的application函数
     # print(app)
-    wsgi_server = WSGIServer(port, app)
+    wsgi_server = WSGIServer(port, app, conf_info["static_path"])
     wsgi_server.run_forever()
 
 
